@@ -1,0 +1,11 @@
+server:
+    name: printer-api
+    port: 8080
+    apiPathPrefix: /HP-MJF/PI/1.0
+    writeTimeout: 15
+    readTimeout: 15
+    idleTimeout: 15
+    allowedMethods: "GET, HEAD, POST, PUT, DELETE, OPTIONS"
+    allowedOrigins: "*"
+logger:
+    verbose: true
