@@ -11,11 +11,11 @@ import (
   "printer-api/models"
 )
 
-func RegisterStatsRoutes(router *mux.Router, config models.Configuration) {
-  router.Handle("/stats", middleware.BasicHandler(GetStats, config)).Methods("GET") // Deliver aggregation API stats
+func RegisterDeviceRoutes(router *mux.Router, config models.Configuration) {
+  router.Handle("/info", middleware.BasicHandler(GetDeviceInfo, config)).Methods("GET") // Deliver device information
 }
 
-func GetStats(w http.ResponseWriter, r *http.Request) (int, uint64, error) {
+func GetDeviceInfo(w http.ResponseWriter, r *http.Request) (int, uint64, error) {
   //processingSpeedValue := "?"
   //processingTimeLeft := "?"
   /*if pubSubConn.ProcessingSpeed > 0 {

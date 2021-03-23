@@ -8,9 +8,10 @@ import (
 	"printer-api/models"
 	"printer-api/middleware"
 	"printer-api/api"
+	"printer-api/managers"
 )
 
-func InitRouter(config models.Configuration) http.Handler {
+func InitRouter(printerManager managers.PrinterManager, config models.Configuration) http.Handler {
 	r := mux.NewRouter()
 	router := r.PathPrefix(config.Server.APIPathPrefix).Subrouter()
 
@@ -26,6 +27,6 @@ func InitRouter(config models.Configuration) http.Handler {
 }
 
 func RegisterAPIRoutes(router *mux.Router, config models.Configuration) {
-	api.RegisterAggregatesRoutes(router, config)
-	api.RegisterStatsRoutes(router, config)
+	api.RegisterDeviceRoutes(router, config)
+	api.RegisterJobsRoutes(router, config)
 }

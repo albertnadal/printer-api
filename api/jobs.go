@@ -1,17 +1,17 @@
 package api
 
 import (
-  "fmt"
-  "encoding/json"
-  "io/ioutil"
+  //"fmt"
+  //"encoding/json"
+  //"io/ioutil"
 	"net/http"
-  "strconv"
+  //"strconv"
 	"github.com/gorilla/mux"
   "printer-api/middleware"
   "printer-api/models"
 )
 
-func RegisterAggregatesRoutes(router *mux.Router, config models.Configuration) {
+func RegisterJobsRoutes(router *mux.Router, config models.Configuration) {
   router.Handle("/aggregate/{company_id}/{contract_id}/{year:[0-9]+}/{month:[0-9]+}", middleware.BasicHandler(PutMonthAggregate, config)).Methods("POST", "PUT") // Creates a monthly aggregate
   router.Handle("/aggregate/{company_id}/{contract_id}/{year:[0-9]+}/{month:[0-9]+}", middleware.BasicHandler(PatchMonthAggregate, config)).Methods("PATCH") // Updates a monthly existing aggregate
   router.Handle("/aggregate/{company_id}/{contract_id}/{year:[0-9]+}", middleware.BasicHandler(PutYearAggregate, config)).Methods("POST", "PUT") // Creates a yearly aggregate
@@ -19,6 +19,7 @@ func RegisterAggregatesRoutes(router *mux.Router, config models.Configuration) {
 }
 
 func PutYearAggregate(w http.ResponseWriter, r *http.Request) (int, uint64, error) {
+/*
   statusCode := http.StatusOK
 	content := "OK"
 
@@ -57,9 +58,12 @@ func PutYearAggregate(w http.ResponseWriter, r *http.Request) (int, uint64, erro
 
   fmt.Fprintf(w, content)
   return statusCode, uint64(len(content)), nil
+*/
+  return 200, 0, nil
 }
 
 func PatchYearAggregate(w http.ResponseWriter, r *http.Request) (int, uint64, error) {
+/*
   statusCode := http.StatusOK
 	content := "OK"
 
@@ -97,10 +101,12 @@ func PatchYearAggregate(w http.ResponseWriter, r *http.Request) (int, uint64, er
   //pubSubConn.Publish(packet)
 
   fmt.Fprintf(w, content)
-  return statusCode, uint64(len(content)), nil
+  return statusCode, uint64(len(content)), nil*/
+  return 200, 0, nil
 }
 
 func PutMonthAggregate(w http.ResponseWriter, r *http.Request) (int, uint64, error) {
+/*
   statusCode := http.StatusOK
 	content := "OK"
 
@@ -146,10 +152,12 @@ func PutMonthAggregate(w http.ResponseWriter, r *http.Request) (int, uint64, err
   //pubSubConn.Publish(packet)
 
   fmt.Fprintf(w, content)
-  return statusCode, uint64(len(content)), nil
+  return statusCode, uint64(len(content)), nil*/
+  return 200, 0, nil
 }
 
 func PatchMonthAggregate(w http.ResponseWriter, r *http.Request) (int, uint64, error) {
+/*
   statusCode := http.StatusOK
 	content := "OK"
 
@@ -195,5 +203,6 @@ func PatchMonthAggregate(w http.ResponseWriter, r *http.Request) (int, uint64, e
   //pubSubConn.Publish(packet)
 
   fmt.Fprintf(w, content)
-  return statusCode, uint64(len(content)), nil
+  return statusCode, uint64(len(content)), nil*/
+  return 200, 0, nil
 }

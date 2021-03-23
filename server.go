@@ -10,6 +10,7 @@ import (
 	//"printer-api/api"
 	"printer-api/router"
 	"printer-api/models"
+	"printer-api/managers"
 	//"printer-api/middleware"
 )
 
@@ -24,7 +25,8 @@ func main() {
 			os.Exit(1)
 	}
 
-	httpHandler := router.InitRouter(config)
+	printerManager := managers.InitPrinterManager("HP Jet Fusion 5200", config)
+	httpHandler := router.InitRouter(printerManager, config)
 
 	fmt.Println("Listening on port "+itoa(config.Server.Port))
 	srv := &http.Server{

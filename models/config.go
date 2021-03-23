@@ -17,6 +17,10 @@ type Configuration struct {
 		AllowedMethods string `yaml:"allowedMethods"`
 		AllowedOrigins string `yaml:"allowedOrigins"`
 	} `yaml:"server"`
+	MqttBroker struct {
+		Host string `yaml:"host"`
+		Port int32 `yaml:"port"`
+	} `yaml:"mqttBroker"`
 	Logger struct {
 		Verbose bool `yaml:"verbose"`
 	} `yaml:"logger"`
