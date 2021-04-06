@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/dustin/go-humanize"
 	"printer-api/models"
+	"printer-api/managers"
 )
 
 func InitLogger(config models.Configuration) {
@@ -19,7 +20,7 @@ func InitLogger(config models.Configuration) {
 	}
 }
 
-func BasicHandler(f func(http.ResponseWriter, *http.Request) (int, uint64, error), config models.Configuration) http.Handler {
+func BasicHandler(f func(http.ResponseWriter, *http.Request, managers.PrinterManager) (int, uint64, error), printerManager managers.PrinterManager, config models.Configuration) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -41,14 +42,14 @@ func BasicHandler(f func(http.ResponseWriter, *http.Request) (int, uint64, error
 				logger.Info(r.Method + " " + r.URL.RequestURI())
 			}()
 
-			statusCode, responseLength, err := f(w, r)
+			statusCode, responseLength, err := f(w, r, printerManager)
 			if(config.Logger.Verbose && err != nil) {
 				logrus.Error(err)
 			}
 
 		} else if !config.Logger.Verbose {
 			// Mode verbose disabled
-			f(w, r)
+			f(w, r, printerManager)
 		}
 	})
 }

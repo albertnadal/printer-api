@@ -2,7 +2,5 @@
     "id": "dc7a0add-7626-4d05-8f02-96aee697feba",
     "name": "Triceratops scull",
     "status": "printing",
-    "mqttTopic": "dc7a0add-7626-4d05-8f02-96aee697feba",
-    "thumbnail": "/jobs/dc7a0add-7626-4d05-8f02-96aee697feba/thumbnail",
     "mesh":  "/jobs/dc7a0add-7626-4d05-8f02-96aee697feba/stl"
  }

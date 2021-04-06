@@ -11,10 +11,7 @@ import (
 )
 
 type PrinterManager struct {
-  PrinterModel string
-  MqttBrokerHost string
-  MqttBrokerPort int32
-  Status string
+  Device models.DeviceInfo
   Jobs map[string]models.Job
 }
 
@@ -34,14 +31,20 @@ func (pm *PrinterManager) LoadJobsFromDisk() {
   }
 }
 
-func InitPrinterManager(printerModel string, config models.Configuration) (PrinterManager) {
+func (pm *PrinterManager) GetDeviceInfo() (models.DeviceInfo) {
+  return pm.Device
+}
+
+func InitPrinterManager(config models.Configuration) (PrinterManager) {
   printer := PrinterManager{
-    Status: "idle",
-    PrinterModel: printerModel,
-    MqttBrokerHost: config.MqttBroker.Host,
-    MqttBrokerPort: config.MqttBroker.Port,
     Jobs: make(map[string]models.Job),
   }
+  printer.Device.Id = config.Server.Id
+  printer.Device.Name = config.Server.Name
+  printer.Device.Status = "idle"
+  printer.Device.MqttTopic = config.Server.Id
+  printer.Device.MqttBroker.Host = config.MqttBroker.Host
+  printer.Device.MqttBroker.Port = config.MqttBroker.Port
   printer.LoadJobsFromDisk()
   return printer
 }

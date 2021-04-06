@@ -8,6 +8,7 @@ import (
 
 type Configuration struct {
 	Server struct {
+		Id string `yaml:"id"`
 		Name string `yaml:"name"`
 		Port int32 `yaml:"port"`
 		APIPathPrefix string `yaml:"apiPathPrefix"`

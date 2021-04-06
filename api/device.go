@@ -2,43 +2,28 @@ package api
 
 import (
   "fmt"
-  //"encoding/json"
+  "encoding/json"
 	"net/http"
   "strings"
   "time"
 	"github.com/gorilla/mux"
   "printer-api/middleware"
   "printer-api/models"
+  "printer-api/managers"
 )
 
-func RegisterDeviceRoutes(router *mux.Router, config models.Configuration) {
-  router.Handle("/info", middleware.BasicHandler(GetDeviceInfo, config)).Methods("GET") // Deliver device information
+func RegisterDeviceRoutes(router *mux.Router, printerManager managers.PrinterManager, config models.Configuration) {
+  router.Handle("/info", middleware.BasicHandler(GetDeviceInfo, printerManager, config)).Methods("GET") // Deliver device information
 }
 
-func GetDeviceInfo(w http.ResponseWriter, r *http.Request) (int, uint64, error) {
-  //processingSpeedValue := "?"
-  //processingTimeLeft := "?"
-  /*if pubSubConn.ProcessingSpeed > 0 {
-    processingSpeedValue = fmt.Sprintf("%d ops/min.", pubSubConn.ProcessingSpeed)
-    processingTimeLeft = durationToShortString(pubSubConn.ProcessingTimeLeft)
-  }
-
-  stats := &models.AggregationAPIStats{
-    TotalReceivedOps: pubSubConn.TotalReceivedOps,
-    TotalProcessedOps: pubSubConn.TotalProcessedOps,
-    TotalOpsAwaiting: pubSubConn.TotalOpsAwaiting,
-    ProcessingSpeed: processingSpeedValue,
-    ProcessingTimeLeft: processingTimeLeft,
-  }
-
-  content, err := json.Marshal(stats);
+func GetDeviceInfo(w http.ResponseWriter, r *http.Request, printerManager managers.PrinterManager) (int, uint64, error) {
+  info := printerManager.GetDeviceInfo()
+  content, err := json.Marshal(info);
   if err != nil {
     w.WriteHeader(http.StatusInternalServerError)
-    fmt.Fprintf(w, "{}")
-		return http.StatusInternalServerError, uint64(len(content)), err
-  }*/
-
-  content := "hello world!"
+    fmt.Fprintf(w, "")
+		return http.StatusInternalServerError, 0, err
+  }
 
   w.Header().Set("Content-Type", "application/json; charset=utf-8")
   fmt.Fprintf(w, string(content))

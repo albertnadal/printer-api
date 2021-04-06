@@ -25,7 +25,7 @@ func main() {
 			os.Exit(1)
 	}
 
-	printerManager := managers.InitPrinterManager("HP Jet Fusion 5200", config)
+	printerManager := managers.InitPrinterManager(config)
 	httpHandler := router.InitRouter(printerManager, config)
 
 	fmt.Println("Listening on port "+itoa(config.Server.Port))

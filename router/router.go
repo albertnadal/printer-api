@@ -22,11 +22,11 @@ func InitRouter(printerManager managers.PrinterManager, config models.Configurat
 	)
 
 	middleware.InitLogger(config)
-	RegisterAPIRoutes(router, config)
+	RegisterAPIRoutes(router, printerManager, config)
 	return cors(router)
 }
 
-func RegisterAPIRoutes(router *mux.Router, config models.Configuration) {
-	api.RegisterDeviceRoutes(router, config)
-	api.RegisterJobsRoutes(router, config)
+func RegisterAPIRoutes(router *mux.Router, printerManager managers.PrinterManager, config models.Configuration) {
+	api.RegisterDeviceRoutes(router, printerManager, config)
+	api.RegisterJobsRoutes(router, printerManager, config)
 }
