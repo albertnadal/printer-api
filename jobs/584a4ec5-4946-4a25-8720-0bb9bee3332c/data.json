@@ -1,8 +1,8 @@
 {
-    "id": "dc7a0add-7626-4d05-8f02-96aee697feba",
+    "id": "584a4ec5-4946-4a25-8720-0bb9bee3332c",
     "name": "Triceratops scull",
     "status": "ready",
-    "mesh":  "/jobs/dc7a0add-7626-4d05-8f02-96aee697feba/stl",
+    "mesh":  "/jobs/584a4ec5-4946-4a25-8720-0bb9bee3332c/stl",
     "eta": 0,
     "elapsed": 0,
     "layer_thickness": 0.2,

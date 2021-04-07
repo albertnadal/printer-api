@@ -11,6 +11,7 @@ type Configuration struct {
 		Id string `yaml:"id"`
 		Name string `yaml:"name"`
 		Port int32 `yaml:"port"`
+		PrintSpeed int32 `yaml:"printSpeed"`
 		APIPathPrefix string `yaml:"apiPathPrefix"`
 		WriteTimeout time.Duration `yaml:"writeTimeout"`
 		ReadTimeout time.Duration `yaml:"readTimeout"`

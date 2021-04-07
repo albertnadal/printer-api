@@ -1,11 +1,10 @@
 package api
 
 import (
-  //"fmt"
-  //"encoding/json"
-  //"io/ioutil"
+  "fmt"
+  "encoding/json"
+  "encoding/binary"
 	"net/http"
-  //"strconv"
 	"github.com/gorilla/mux"
   "printer-api/middleware"
   "printer-api/models"
@@ -13,56 +12,101 @@ import (
 )
 
 func RegisterJobsRoutes(router *mux.Router, printerManager managers.PrinterManager, config models.Configuration) {
-  router.Handle("/jobs/{job_id}/start", middleware.BasicHandler(StartJob, printerManager, config)).Methods("POST", "PUT") // Creates a monthly aggregate
+  router.Handle("/jobs", middleware.BasicHandler(GetJobs, printerManager, config)).Methods("GET") // Deliver list of available jobs
+  router.Handle("/jobs/{job_id}", middleware.BasicHandler(GetJobDetails, printerManager, config)).Methods("GET") // Deliver the job details
+  router.Handle("/jobs/{job_id}/stl", middleware.BasicHandler(GetJobSTL, printerManager, config)).Methods("GET") // Deliver the STL mesh file of the job
+  router.Handle("/jobs/{job_id}/start", middleware.BasicHandler(StartJob, printerManager, config)).Methods("POST") // Starts the job
+  router.Handle("/jobs/{job_id}/cancel", middleware.BasicHandler(CancelJob, printerManager, config)).Methods("POST") // Cancel the job
+}
+
+func GetJobs(w http.ResponseWriter, r *http.Request, printerManager managers.PrinterManager) (int, uint64, error) {
+  jobs := printerManager.GetJobs()
+  content, err := json.Marshal(jobs);
+  if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    fmt.Fprintf(w, "")
+		return http.StatusInternalServerError, 0, err
+  }
+
+  w.Header().Set("Content-Type", "application/json; charset=utf-8")
+  fmt.Fprintf(w, string(content))
+  return http.StatusOK, uint64(len(content)), nil
+}
+
+func GetJobDetails(w http.ResponseWriter, r *http.Request, printerManager managers.PrinterManager) (int, uint64, error) {
+  vars := mux.Vars(r)
+  job, err := printerManager.GetJobDetails(vars["job_id"])
+  if err != nil {
+    w.WriteHeader(http.StatusNotFound)
+    fmt.Fprintf(w, "")
+		return http.StatusNotFound, 0, err
+  }
+
+  content, err := json.Marshal(job);
+  if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    fmt.Fprintf(w, "")
+		return http.StatusInternalServerError, 0, err
+  }
+
+  w.Header().Set("Content-Type", "application/json; charset=utf-8")
+  fmt.Fprintf(w, string(content))
+  return http.StatusOK, uint64(len(content)), nil
+}
+
+func GetJobSTL(w http.ResponseWriter, r *http.Request, printerManager managers.PrinterManager) (int, uint64, error) {
+  vars := mux.Vars(r)
+  STLbytes, err := printerManager.GetJobSTLbytes(vars["job_id"])
+  if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    fmt.Fprintf(w, "")
+		return http.StatusInternalServerError, 0, err
+  }
+
+  w.Header().Set("Content-Type", "model/stl")
+  w.Header().Set("Content-Disposition", "inline; filename=\""+vars["job_id"]+".stl\"")
+  STLbytes.WriteTo(w)
+  return http.StatusOK, uint64(binary.Size(STLbytes)), nil
 }
 
 func StartJob(w http.ResponseWriter, r *http.Request, printerManager managers.PrinterManager) (int, uint64, error) {
-/*
-  statusCode := http.StatusOK
-	content := "OK"
-
   vars := mux.Vars(r)
-  var parameters []models.PacketParameter
-  parameters = append(parameters, models.PacketParameter{Key: "company_id", Value: vars["company_id"]})
-  parameters = append(parameters, models.PacketParameter{Key: "contract_id", Value: vars["contract_id"]})
-	parameters = append(parameters, models.PacketParameter{Key: "year", Value: vars["year"]})
-	parameters = append(parameters, models.PacketParameter{Key: "month", Value: vars["month"]})
-
-  value, _ := strconv.ParseInt(vars["year"], 10, 32)
-  if year := int(value); (year < 2000) || (year >= 2050) {
-    content = "Invalid year"
-    fmt.Fprintf(w, content)
-    return http.StatusBadRequest, uint64(len(content)), nil
-  }
-
-  value, _ = strconv.ParseInt(vars["month"], 10, 32)
-  if year := int(value); (year < 1) || (year > 12) {
-    content = "Invalid month"
-    fmt.Fprintf(w, content)
-    return http.StatusBadRequest, uint64(len(content)), nil
-  }
-
-  defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		content = "Cannot read request body"
-		fmt.Fprintf(w, content)
-		return http.StatusInternalServerError,  uint64(len(content)), err
-	}
-
-  var aggregate_contract_month models.AggregateContractMonth
-	if err := json.Unmarshal(body, &aggregate_contract_month); err != nil {
+  job, err := printerManager.StartJob(vars["job_id"])
+  if err != nil {
     w.WriteHeader(http.StatusBadRequest)
-		content = "Invalid JSON"
-    fmt.Fprintf(w, content)
-		return http.StatusBadRequest, uint64(len(content)), err
-	}
+    fmt.Fprintf(w, "")
+		return http.StatusBadRequest, 0, err
+  }
 
-  //packet := &models.Packet{Action: "upsert", Labels: []string{"reports"}, Model: "aggregate_contract_month", Payload: body, SourceEndpoint: r.URL.Path, Parameters: parameters}
-  //pubSubConn.Publish(packet)
+  content, err := json.Marshal(job);
+  if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    fmt.Fprintf(w, "")
+		return http.StatusInternalServerError, 0, err
+  }
 
-  fmt.Fprintf(w, content)
-  return statusCode, uint64(len(content)), nil*/
-  return 200, 0, nil
+  w.Header().Set("Content-Type", "application/json; charset=utf-8")
+  fmt.Fprintf(w, string(content))
+  return http.StatusOK, uint64(len(content)), nil
+}
+
+func CancelJob(w http.ResponseWriter, r *http.Request, printerManager managers.PrinterManager) (int, uint64, error) {
+  vars := mux.Vars(r)
+  job, err := printerManager.CancelJob(vars["job_id"])
+  if err != nil {
+    w.WriteHeader(http.StatusBadRequest)
+    fmt.Fprintf(w, "")
+		return http.StatusBadRequest, 0, err
+  }
+
+  content, err := json.Marshal(job);
+  if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    fmt.Fprintf(w, "")
+		return http.StatusInternalServerError, 0, err
+  }
+
+  w.Header().Set("Content-Type", "application/json; charset=utf-8")
+  fmt.Fprintf(w, string(content))
+  return http.StatusOK, uint64(len(content)), nil
 }

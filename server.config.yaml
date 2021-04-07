@@ -2,6 +2,7 @@ server:
     id: "4536c604-ff15-4315-a95c-8eee866ce266"
     name: "HP Jet Fusion 5200"
     port: 8080
+    printSpeed: 50
     apiPathPrefix: "/"
     writeTimeout: 15
     readTimeout: 15

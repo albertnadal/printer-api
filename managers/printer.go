@@ -2,50 +2,165 @@ package managers
 
 import (
   "fmt"
-  //"strconv"
-  //"os"
-  //"log"
+  "time"
+  "errors"
+  mqtt "github.com/eclipse/paho.mqtt.golang"
+  "bytes"
   "encoding/json"
   "io/ioutil"
   "printer-api/models"
 )
 
 type PrinterManager struct {
-  Device models.DeviceInfo
-  Jobs map[string]models.Job
+  Config models.Configuration
+  Device *models.DeviceInfo
+  MQTTClient mqtt.Client
+  Jobs map[string]*models.JobDetails
+}
+
+func (pm *PrinterManager) PrintJob(job *models.JobDetails) {
+  start := time.Now()
+  for true {
+    message := fmt.Sprintf("{\"status\": \"%s\", \"job\": {\"id\": \"%s\", \"status\": \"%s\", \"layer\": %d}}", pm.Device.Status, job.Id, job.Status, job.CurrentLayer)
+    token := pm.MQTTClient.Publish(pm.Config.Server.Id, 0, false, message)
+    token.Wait()
+  
+    // Printing speed is the time in milliseconds needed to print a layer (lower is faster)
+    time.Sleep(time.Duration(pm.Config.Server.PrintSpeed) * time.Millisecond)
+    job.Elapsed = int32(time.Now().Sub(start).Seconds())
+    job.CurrentLayer++
+
+    // Check if the job has been cancelled
+    if(job.Status == "cancelled") {
+      return
+    }
+  
+    // Check if the job has been completed
+    if(job.CurrentLayer >= job.TotalLayers) {
+      pm.Device.Status = "idle"
+      job.Status = "completed"
+      return
+    }
+  }
 }
 
 func (pm *PrinterManager) LoadJobsFromDisk() {
   files, err := ioutil.ReadDir("./jobs")
   check(err)
 
+  pm.Jobs = make(map[string]*models.JobDetails)
   for _, file := range files {
     fmt.Printf("Loading job with id %s... ", file.Name())
-    var job models.Job
+    var job models.JobDetails
     jsonData, err := ioutil.ReadFile("./jobs/" + file.Name() + "/data.json")
     check(err)
     err = json.Unmarshal(jsonData, &job)
     check(err)
-    pm.Jobs[file.Name()] = job
+    job.ETA = int32(float64(job.TotalLayers) * (float64(pm.Config.Server.PrintSpeed) / float64(1000)))
+    pm.Jobs[file.Name()] = &job
     fmt.Printf("done\n")
   }
 }
 
-func (pm *PrinterManager) GetDeviceInfo() (models.DeviceInfo) {
+func (pm *PrinterManager) GetDeviceInfo() (*models.DeviceInfo) {
+  fmt.Printf("GetDeviceInfo DEVICE INFO (%v)\n", pm.Device)
   return pm.Device
+}
+
+func (pm *PrinterManager) GetJobs() (models.JobsList) {
+  jobs_list := models.JobsList{}
+  for _, job := range pm.Jobs {
+    jobs_list.Jobs = append(jobs_list.Jobs, job.Id)
+  }
+  return jobs_list
+}
+
+func (pm *PrinterManager) StartJob(jobId string) (models.JobDetails, error) {
+  job, found := pm.Jobs[jobId]
+  if !found {
+    return *job, errors.New("Job does not exists")
+  }
+
+  pm.Device.Status = "printing"
+  job.Status = "printing"
+  job.CurrentLayer = 0
+  job.Elapsed = 0
+
+  // Start printing the job in a goroutine
+  go pm.PrintJob(job)
+
+  return *job, nil
+}
+
+func (pm *PrinterManager) CancelJob(jobId string) (models.JobDetails, error) {
+  job, found := pm.Jobs[jobId]
+  if !found {
+    return *job, errors.New("Job does not exists")
+  }
+
+  pm.Device.Status = "idle"
+  job.Status = "cancelled"
+
+  return *job, nil
+}
+
+func (pm *PrinterManager) GetJobDetails(jobId string) (models.JobDetails, error) {
+  job, found := pm.Jobs[jobId]
+  if !found {
+    return *job, errors.New("Job does not exists")
+  }
+
+  return *job, nil
+}
+
+func (pm *PrinterManager) GetJobSTLbytes(jobId string) (*bytes.Buffer, error) {
+  streamSTLbytes, err := ioutil.ReadFile("./jobs/"+jobId+"/mesh.stl")
+
+  if err != nil {
+    return nil, err
+  }
+
+  return bytes.NewBuffer(streamSTLbytes), nil
+}
+
+func (pm *PrinterManager) onConnectMQTT(client mqtt.Client) {
+  //fmt.Printf("Connected to MQTT broker at %s:%d", pm.Config.MqttBroker.Host, pm.Config.MqttBroker.Port)
+}
+
+func (pm *PrinterManager) onConnectLostMQTT(client mqtt.Client, err error) {
+  fmt.Printf("Connection lost to MQTT broker at %s:%d.\nError: %v\n", pm.Config.MqttBroker.Host, pm.Config.MqttBroker.Port, err)
 }
 
 func InitPrinterManager(config models.Configuration) (PrinterManager) {
   printer := PrinterManager{
-    Jobs: make(map[string]models.Job),
+    Config: config,
+    Device: &models.DeviceInfo{
+      Id: config.Server.Id,
+      Name: config.Server.Name,
+      Status: "idle",
+      MqttTopic: config.Server.Id,
+      MqttBroker: models.MQTTBrokerData{
+        Host: config.MqttBroker.Host,
+        Port: config.MqttBroker.Port,
+      },
+    },
   }
-  printer.Device.Id = config.Server.Id
-  printer.Device.Name = config.Server.Name
-  printer.Device.Status = "idle"
-  printer.Device.MqttTopic = config.Server.Id
-  printer.Device.MqttBroker.Host = config.MqttBroker.Host
-  printer.Device.MqttBroker.Port = config.MqttBroker.Port
+
   printer.LoadJobsFromDisk()
+
+  opts := mqtt.NewClientOptions()
+  opts.AddBroker(fmt.Sprintf("tcp://%s:%d", config.MqttBroker.Host, config.MqttBroker.Port))
+  opts.SetClientID(config.Server.Id)
+  opts.OnConnect = printer.onConnectMQTT
+  opts.OnConnectionLost = printer.onConnectLostMQTT
+  printer.MQTTClient = mqtt.NewClient(opts)
+
+  fmt.Printf("Connecting to MQTT broker at %s:%d... ", config.MqttBroker.Host, config.MqttBroker.Port)
+  if token := printer.MQTTClient.Connect(); token.Wait() && token.Error() != nil {
+    panic(token.Error())
+  }
+  fmt.Printf("done\n")
+
   return printer
 }
 
@@ -54,149 +169,3 @@ func check(e error) {
       panic(e)
   }
 }
-/*
-func (pm *PrinterManager) ListenWorkerOpsStats() {
-  ps.NatsConn.QueueSubscribe("worker_stats", "workers", func(status_msg *stan.Msg) {
-    var worker_stats models.WorkerStats
-    err := json.Unmarshal(status_msg.Data, &worker_stats)
-
-    if(err == nil) {
-      ps.ProcessingSpeed = worker_stats.ProcessingSpeed
-      ps.TotalProcessedOps = worker_stats.TotalProcessedOps
-      if ps.TotalProcessedOps > ps.TotalReceivedOps {
-        ps.TotalProcessedOps = ps.TotalReceivedOps;
-      }
-      ps.TotalOpsAwaiting = ps.TotalReceivedOps - ps.TotalProcessedOps
-      seconds_left := (ps.TotalOpsAwaiting * 60) / uint64(Max(ps.ProcessingSpeed, 1))
-      ps.ProcessingTimeLeft = time.Duration(seconds_left)*time.Second
-    }
-
-  }, stan.StartWithLastReceived())
-}
-
-func (ps *PubSubConnection) ListenAndProcessQueues(config models.Configuration, processPacket func(*models.Packet, string, error)) {
-
-  pool := slaves.NewPool(20, func(paramsObj interface{}) {
-    processPacket(paramsObj.(SlaveParams).Packet, paramsObj.(SlaveParams).Subject, paramsObj.(SlaveParams).Err)
-  })
-
-  for _, queue := range config.Worker.Queues {
-
-    sub, err := ps.NatsConn.QueueSubscribe(queue, config.Nats.QueueGroup, func (msg *stan.Msg) {
-      if msg.Subject == "reports" {
-        var packet models.Packet
-        err := json.Unmarshal(msg.Data, &packet)
-
-        if msg.Sequence < config.LastProcessedMessageSequence {
-          // Just ignore duplicated old messages
-          log.Println(" [ LOWER SEQUENCE ] Received seq:", msg.Sequence, " Expected seq:", config.LastProcessedMessageSequence + 1, " This operation has been processed. Operation ignored.")
-          msg.Ack()
-        } else {
-          if msg.Sequence > config.LastProcessedMessageSequence+1 {
-            log.Println(" [ ERROR ] Received seq:", msg.Sequence, " Expected seq:", config.LastProcessedMessageSequence + 1, " Some queued operations may have been dropped due to queue size overflow.")
-          }
-          packet.Sequence = msg.Sequence
-          pool.Serve(SlaveParams{&packet, msg.Subject, err})
-          config.LastProcessedMessageSequence = msg.Sequence
-          ps.TotalProcessedOps++
-          opsProcessedDuringInterval++
-          msg.Ack()
-        }
-      }
-
-    }, stan.DeliverAllAvailable(), stan.DurableName(queue+"_"+config.Nats.DurableName), stan.SetManualAckMode(), stan.MaxInflight(10), stan.AckWait(10*time.Second))
-
-    if err != nil {
-  		ps.NatsConn.Close()
-  		log.Fatal(err)
-  	}
-
-    if queue == "reports" {
-      // Send processed operations count every second
-      go doEvery(time.Second, func () {
-        var worker_stats models.WorkerStats
-        worker_stats.TotalProcessedOps = ps.TotalProcessedOps
-        worker_stats.ProcessingSpeed = opsProcessedEveryFiveMinutes / 5
-
-        serialized_worker_stats, err := json.Marshal(worker_stats)
-        if(err == nil) {
-          ps.NatsConn.Publish("worker_stats", serialized_worker_stats)
-        }
-      })
-
-      // Periodic function used to calculate processing speed
-      go doEvery(5*time.Minute, func () {
-        opsProcessedEveryFiveMinutes = opsProcessedDuringInterval
-        opsProcessedDuringInterval = 0
-      })
-    }
-
-    ps.Subscriptions = append(ps.Subscriptions, sub)
-    log.Printf("Listening on queue=[%s], clientID=[%s], qgroup=[%s] durable=[%s]\n", queue, config.Nats.ClientId, config.Nats.QueueGroup, config.Nats.DurableName)
-  }
-}
-
-func (ps *PubSubConnection) Publish(packet *models.Packet) error {
-  serialized_packet, err := json.Marshal(packet)
-  if(err != nil) {
-    return err
-  }
-
-  for _, label := range packet.Labels {
-    if label == "reports" {
-      //log.Println("Publishing packet in "+label+" queue")
-      ps.NatsConn.Publish(label, serialized_packet)
-      ps.TotalReceivedOps++
-    }
-  }
-
-  return nil
-}
-
-func Connect(config models.Configuration) (*PubSubConnection, error) {
-  uri := os.Getenv("NATS_URI");
-  if uri == "" {
-    uri = "nats://"+config.Nats.Host+":"+itoa(config.Nats.Port)
-  }
-
-  sc, err := stan.Connect(config.Nats.ClusterId, config.Nats.ClientId, stan.NatsURL(uri), stan.MaxPubAcksInflight(10), stan.SetConnectionLostHandler(func(_ stan.Conn, reason error) {
-  			log.Fatalf("[ ERROR ] NATS connection lost, reason: %v", reason)
-  }))
-
-  if(err == nil) {
-    fmt.Println("Connected to "+uri)
-  }
-
-  conn := &PubSubConnection{Platform: "nats-streaming", Host: config.Nats.Host, Port: config.Nats.Port, URI: uri, NatsConn: sc, TotalReceivedOps: 0, TotalProcessedOps: 0, TotalOpsAwaiting: 0, ProcessingSpeed: 0}
-  return conn, err
-}
-
-func Disconnect(pubSubConn *PubSubConnection, config models.Configuration) {
-  if config.Nats.DurableName == "" || config.Nats.UnsubscribeOnExit {
-    log.Println("Unsubscribing from active subscriptions...")
-    for _, sub := range pubSubConn.Subscriptions {
-        sub.Unsubscribe()
-    }
-  }
-
-  log.Println("Disconnected from "+pubSubConn.URI)
-  pubSubConn.NatsConn.Close()
-}
-
-func doEvery(d time.Duration, f func()) {
-	for range time.Tick(d) {
-		f()
-	}
-}
-
-func Max(x, y int) int {
-    if x < y {
-        return y
-    }
-    return x
-}
-
-func itoa(n int32) string {
-    return strconv.FormatInt(int64(n), 10)
-}
-*/

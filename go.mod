@@ -6,6 +6,7 @@ require (
 	github.com/Jeffail/gabs v1.4.0
 	github.com/Jeffail/gabs/v2 v2.0.1
 	github.com/dustin/go-humanize v1.0.0
+	github.com/eclipse/paho.mqtt.golang v1.3.3
 	github.com/gorilla/handlers v1.4.0
 	github.com/gorilla/mux v1.7.2
 	github.com/lib/pq v1.1.1
