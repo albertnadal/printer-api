@@ -1,0 +1,11 @@
+{
+    "id": "fe0785f6-c3e1-474f-9b99-0a39ee0a42b3",
+    "name": "Grand MasterYoda",
+    "status": "ready",
+    "mesh":  "http://104.155.88.150:8080/jobs/fe0785f6-c3e1-474f-9b99-0a39ee0a42b3/stl",
+    "eta": 0,
+    "elapsed": 0,
+    "layer_thickness": 0.5,
+    "total_layers": 270,
+    "current_layer": 0
+ }

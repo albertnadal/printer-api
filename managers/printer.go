@@ -116,10 +116,15 @@ func (pm *PrinterManager) ResetDevice() (*models.DeviceInfo) {
 }
 
 func (pm *PrinterManager) DeleteJob(jobId string) (error) {
-  _, found := pm.Jobs[jobId]
+  job, found := pm.Jobs[jobId]
   if !found {
     return errors.New("Job does not exists")
   }
+
+  // Send MQTT message with the active job status
+  message := fmt.Sprintf("{\"job\": {\"id\": \"%s\", \"status\": \"%s\", \"layer\": %d}}", job.Id, "deleted", job.CurrentLayer)
+  token := pm.MQTTClient.Publish(pm.Config.Server.Id+"/jobs", 0, false, message)
+  token.Wait()
 
   delete(pm.Jobs, jobId);
   return nil
@@ -137,6 +142,10 @@ func (pm *PrinterManager) StartJob(jobId string) (models.JobDetails, error) {
   job, found := pm.Jobs[jobId]
   if !found {
     return *job, errors.New("Job does not exists")
+  }
+
+  if pm.Device.Status == "printing" {
+    return *job, errors.New("Printer is printing right now")
   }
 
   pm.Device.Status = "printing"

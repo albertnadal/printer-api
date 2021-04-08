@@ -1,0 +1,11 @@
+{
+    "id": "a9088b0b-d6e4-4fbf-a137-278bd98af9f0",
+    "name": "Minion Dave",
+    "status": "ready",
+    "mesh":  "http://104.155.88.150:8080/jobs/a9088b0b-d6e4-4fbf-a137-278bd98af9f0/stl",
+    "eta": 0,
+    "elapsed": 0,
+    "layer_thickness": 0.5,
+    "total_layers": 270,
+    "current_layer": 0
+ }

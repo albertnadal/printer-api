@@ -1,0 +1,11 @@
+{
+    "id": "e99938d0-af5b-4b22-b832-c63dcd244f2d",
+    "name": "Fish cup",
+    "status": "cancelled",
+    "mesh":  "http://104.155.88.150:8080/jobs/e99938d0-af5b-4b22-b832-c63dcd244f2d/stl",
+    "eta": 0,
+    "elapsed": 43,
+    "layer_thickness": 0.5,
+    "total_layers": 270,
+    "current_layer": 120
+ }
