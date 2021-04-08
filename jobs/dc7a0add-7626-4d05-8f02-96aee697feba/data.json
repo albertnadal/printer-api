@@ -1,11 +1,11 @@
 {
     "id": "dc7a0add-7626-4d05-8f02-96aee697feba",
     "name": "Triceratops scull",
-    "status": "ready",
-    "mesh":  "/jobs/dc7a0add-7626-4d05-8f02-96aee697feba/stl",
+    "status": "cancelled",
+    "mesh":  "http://104.155.88.150:8080/jobs/dc7a0add-7626-4d05-8f02-96aee697feba/stl",
     "eta": 0,
-    "elapsed": 0,
-    "layer_thickness": 0.2,
-    "total_layers": 4000,
-    "current_layer": 0
+    "elapsed": 43,
+    "layer_thickness": 0.5,
+    "total_layers": 600,
+    "current_layer": 240
  }

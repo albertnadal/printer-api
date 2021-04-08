@@ -11,5 +11,4 @@ type DeviceInfo struct {
 	Status string `json:"status"`
 	MqttTopic string `json:"mqttTopic"`
 	MqttBroker MQTTBrokerData `json:"mqttBroker"`
-	//Jobs []Job `json:"jobs"`
 }

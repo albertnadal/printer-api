@@ -7,11 +7,9 @@ import (
 	"time"
 	"strconv"
 	"os"
-	//"printer-api/api"
 	"printer-api/router"
 	"printer-api/models"
 	"printer-api/managers"
-	//"printer-api/middleware"
 )
 
 func main() {

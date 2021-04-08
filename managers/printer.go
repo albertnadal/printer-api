@@ -21,14 +21,10 @@ type PrinterManager struct {
 func (pm *PrinterManager) PrintJob(job *models.JobDetails) {
   start := time.Now()
   for true {
-    message := fmt.Sprintf("{\"status\": \"%s\", \"job\": {\"id\": \"%s\", \"status\": \"%s\", \"layer\": %d}}", pm.Device.Status, job.Id, job.Status, job.CurrentLayer)
-    token := pm.MQTTClient.Publish(pm.Config.Server.Id, 0, false, message)
+    // Send MQTT message with the active job status
+    message := fmt.Sprintf("{\"job\": {\"id\": \"%s\", \"status\": \"%s\", \"layer\": %d}}", job.Id, job.Status, job.CurrentLayer)
+    token := pm.MQTTClient.Publish(pm.Config.Server.Id+"/jobs", 0, false, message)
     token.Wait()
-  
-    // Printing speed is the time in milliseconds needed to print a layer (lower is faster)
-    time.Sleep(time.Duration(pm.Config.Server.PrintSpeed) * time.Millisecond)
-    job.Elapsed = int32(time.Now().Sub(start).Seconds())
-    job.CurrentLayer++
 
     // Check if the job has been cancelled
     if(job.Status == "cancelled") {
@@ -38,9 +34,22 @@ func (pm *PrinterManager) PrintJob(job *models.JobDetails) {
     // Check if the job has been completed
     if(job.CurrentLayer >= job.TotalLayers) {
       pm.Device.Status = "idle"
+      message := fmt.Sprintf("{\"status\": \"%s\"}", pm.Device.Status)
+      token := pm.MQTTClient.Publish(pm.Config.Server.Id, 0, false, message)
+      token.Wait()
+
       job.Status = "completed"
+      // Send MQTT message to indicate the job has been completed
+      message = fmt.Sprintf("{\"job\": {\"id\": \"%s\", \"status\": \"%s\", \"layer\": %d}}", job.Id, job.Status, job.CurrentLayer)
+      token = pm.MQTTClient.Publish(pm.Config.Server.Id+"/jobs", 0, false, message)
+      token.Wait()
       return
     }
+
+    // Printing speed is the time in milliseconds needed to print a layer (lower is faster)
+    time.Sleep(time.Duration(pm.Config.Server.PrintSpeed) * time.Millisecond)
+    job.Elapsed = int32(time.Now().Sub(start).Seconds())
+    job.CurrentLayer++
   }
 }
 
@@ -63,8 +72,57 @@ func (pm *PrinterManager) LoadJobsFromDisk() {
 }
 
 func (pm *PrinterManager) GetDeviceInfo() (*models.DeviceInfo) {
-  fmt.Printf("GetDeviceInfo DEVICE INFO (%v)\n", pm.Device)
   return pm.Device
+}
+
+func (pm *PrinterManager) ResetDevice() (*models.DeviceInfo) {
+  files, err := ioutil.ReadDir("./jobs")
+  check(err)
+
+  for _, file := range files {
+    var job models.JobDetails
+    jsonData, err := ioutil.ReadFile("./jobs/" + file.Name() + "/data.json")
+    check(err)
+    err = json.Unmarshal(jsonData, &job)
+    check(err)
+    _, found := pm.Jobs[file.Name()]
+    if !found {
+      pm.Jobs[file.Name()] = &job
+    }
+    job.ETA = int32(float64(job.TotalLayers) * (float64(pm.Config.Server.PrintSpeed) / float64(1000)))
+  }
+
+  for _, job := range pm.Jobs {
+    if (job.Status == "printing") {
+      pm.CancelJob(job.Id)
+    }
+
+    if (job.Id == "dc7a0add-7626-4d05-8f02-96aee697feba") {
+      job.Status = "cancelled"
+      job.Elapsed = 43
+      job.CurrentLayer = 240
+    } else {
+      job.Status = "ready"
+      job.Elapsed = 0
+      job.CurrentLayer = 0
+    }
+  }
+  pm.Device.Status = "idle"
+  message := fmt.Sprintf("{\"status\": \"%s\"}", pm.Device.Status)
+  token := pm.MQTTClient.Publish(pm.Config.Server.Id, 0, false, message)
+  token.Wait()
+
+  return pm.GetDeviceInfo()
+}
+
+func (pm *PrinterManager) DeleteJob(jobId string) (error) {
+  _, found := pm.Jobs[jobId]
+  if !found {
+    return errors.New("Job does not exists")
+  }
+
+  delete(pm.Jobs, jobId);
+  return nil
 }
 
 func (pm *PrinterManager) GetJobs() (models.JobsList) {
@@ -82,6 +140,10 @@ func (pm *PrinterManager) StartJob(jobId string) (models.JobDetails, error) {
   }
 
   pm.Device.Status = "printing"
+  message := fmt.Sprintf("{\"status\": \"%s\"}", pm.Device.Status)
+  token := pm.MQTTClient.Publish(pm.Config.Server.Id, 0, false, message)
+  token.Wait()
+
   job.Status = "printing"
   job.CurrentLayer = 0
   job.Elapsed = 0
@@ -99,8 +161,12 @@ func (pm *PrinterManager) CancelJob(jobId string) (models.JobDetails, error) {
   }
 
   pm.Device.Status = "idle"
-  job.Status = "cancelled"
+  message := fmt.Sprintf("{\"status\": \"%s\"}", pm.Device.Status)
+  token := pm.MQTTClient.Publish(pm.Config.Server.Id, 0, false, message)
+  token.Wait()
 
+  job.Status = "cancelled"
+  time.Sleep(1 * time.Second)
   return *job, nil
 }
 

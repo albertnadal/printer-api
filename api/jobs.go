@@ -17,6 +17,7 @@ func RegisterJobsRoutes(router *mux.Router, printerManager managers.PrinterManag
   router.Handle("/jobs/{job_id}/stl", middleware.BasicHandler(GetJobSTL, printerManager, config)).Methods("GET") // Deliver the STL mesh file of the job
   router.Handle("/jobs/{job_id}/start", middleware.BasicHandler(StartJob, printerManager, config)).Methods("POST") // Starts the job
   router.Handle("/jobs/{job_id}/cancel", middleware.BasicHandler(CancelJob, printerManager, config)).Methods("POST") // Cancel the job
+  router.Handle("/jobs/{job_id}", middleware.BasicHandler(DeleteJob, printerManager, config)).Methods("DELETE") // Deletes the job
 }
 
 func GetJobs(w http.ResponseWriter, r *http.Request, printerManager managers.PrinterManager) (int, uint64, error) {
@@ -109,4 +110,18 @@ func CancelJob(w http.ResponseWriter, r *http.Request, printerManager managers.P
   w.Header().Set("Content-Type", "application/json; charset=utf-8")
   fmt.Fprintf(w, string(content))
   return http.StatusOK, uint64(len(content)), nil
+}
+
+func DeleteJob(w http.ResponseWriter, r *http.Request, printerManager managers.PrinterManager) (int, uint64, error) {
+  vars := mux.Vars(r)
+  err := printerManager.DeleteJob(vars["job_id"])
+  if err != nil {
+    w.WriteHeader(http.StatusBadRequest)
+    fmt.Fprintf(w, "")
+		return http.StatusBadRequest, 0, err
+  }
+
+  w.Header().Set("Content-Type", "application/json; charset=utf-8")
+  fmt.Fprintf(w, "")
+  return http.StatusOK, uint64(0), nil
 }
