@@ -1,11 +1,11 @@
 {
     "id": "dc7a0add-7626-4d05-8f02-96aee697feba",
-    "name": "Triceratops scull",
+    "name": "Cube",
     "status": "cancelled",
     "mesh":  "http://104.155.88.150:8080/jobs/dc7a0add-7626-4d05-8f02-96aee697feba/stl",
     "eta": 0,
     "elapsed": 43,
     "layer_thickness": 0.5,
-    "total_layers": 270,
-    "current_layer": 120
+    "total_layers": 377,
+    "current_layer": 112
  }

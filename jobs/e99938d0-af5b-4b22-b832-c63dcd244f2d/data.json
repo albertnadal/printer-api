@@ -1,11 +1,11 @@
 {
     "id": "e99938d0-af5b-4b22-b832-c63dcd244f2d",
-    "name": "Grand Master Yoda",
+    "name": "Ship",
     "status": "cancelled",
     "mesh":  "http://104.155.88.150:8080/jobs/e99938d0-af5b-4b22-b832-c63dcd244f2d/stl",
     "eta": 0,
     "elapsed": 23,
     "layer_thickness": 0.5,
-    "total_layers": 300,
-    "current_layer": 90
+    "total_layers": 412,
+    "current_layer": 305
  }

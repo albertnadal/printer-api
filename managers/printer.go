@@ -100,12 +100,17 @@ func (pm *PrinterManager) ResetDevice() (*models.DeviceInfo) {
     if (job.Id == "dc7a0add-7626-4d05-8f02-96aee697feba") {
       job.Status = "cancelled"
       job.Elapsed = 43
-      job.CurrentLayer = 240
+      job.CurrentLayer = 112
     } else {
       job.Status = "ready"
       job.Elapsed = 0
       job.CurrentLayer = 0
     }
+
+    // Send MQTT message with the job status
+    message := fmt.Sprintf("{\"job\": {\"id\": \"%s\", \"status\": \"%s\", \"layer\": %d}}", job.Id, job.Status, job.CurrentLayer)
+    token := pm.MQTTClient.Publish(pm.Config.Server.Id+"/jobs", 0, false, message)
+    token.Wait()
   }
   pm.Device.Status = "idle"
   message := fmt.Sprintf("{\"status\": \"%s\"}", pm.Device.Status)
